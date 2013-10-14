@@ -80,6 +80,8 @@ GRect bitRect = {
 int adjX = 2;
 int adjY = 0;
 
+PblTm lastUpdate;
+
 // Called once per minute
 void handle_minute_tick(AppContextRef ctx, PebbleTickEvent *t) {
 
@@ -89,24 +91,35 @@ void handle_minute_tick(AppContextRef ctx, PebbleTickEvent *t) {
 
   get_time(&currentTime);
 
+  long currentSec = (currentTime.tm_min*60)+currentTime.tm_sec;
+  long lastUpdateSec = (lastUpdate.tm_min*60)+lastUpdate.tm_sec;
+
+  if (lastUpdateSec +60 < currentSec){ //data is out of date, display error
+	text_layer_set_text(&busLayer, "Timeout error. Please check phone app.");
+  }
+
   string_format_time(dateText, sizeof(dateText), "%A %d %B", &currentTime);
 
   text_layer_set_text(&dateLayer, dateText);
 
 }
 
+char myString[200];
+
 void my_in_rcv_handler(DictionaryIterator *received, void *context) {
 
   // incoming message received
-
-  Tuple *textdata = dict_find(received, 0);
+  Tuple *textdata = dict_find(received, 1234);
 
   if (textdata) {
-    text_layer_set_text(&busLayer, textdata->value->cstring);
+    strcpy(&myString[0], textdata->value->cstring);
+    get_time(&lastUpdate);
+    text_layer_set_text(&busLayer, &myString[0]);
     layer_mark_dirty(&display_layer);
   }
   else{
-    text_layer_set_text(&busLayer, "error");
+    get_time(&lastUpdate);
+    text_layer_set_text(&busLayer, "Data error, update required.");
     layer_mark_dirty(&display_layer);
   }
 
